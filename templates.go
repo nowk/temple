@@ -19,8 +19,6 @@ var (
 	DelimR = "%>"
 )
 
-type templateCfgFunc func(*Templates)
-
 // DevsMode is a templateCfgFunc that sets Reload to true
 func DevsMode(t *Templates) {
 	t.Reload = true
@@ -40,7 +38,7 @@ type Templates struct {
 // NewTemplates provides a new Templates
 // Overiding Fns at this level will not reinclude the DefaultFns, those will
 // require redefinition
-func NewTemplates(dir string, opts ...templateCfgFunc) *Templates {
+func NewTemplates(dir string, opts ...func(*Templates)) *Templates {
 	t := &Templates{
 		Reload: false,
 		Dir:    dir,
