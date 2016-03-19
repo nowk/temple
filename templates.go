@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"html/template"
 	"io"
-	"log"
+	logger "log"
 	"os"
 	"path/filepath"
 	"sync"
@@ -60,7 +60,7 @@ func (t *Templates) Parse() error {
 	t.T = template.New("-").Funcs(t.Fns)
 	t.T.Delims(DelimL, DelimR)
 
-	log.Printf("templates: %s", t.Dir)
+	log(INFO, "templates: %s", t.Dir)
 
 	return filepath.Walk(t.Dir, func(path string, _ os.FileInfo,
 		err error) error {
@@ -74,12 +74,12 @@ func (t *Templates) Parse() error {
 		if ext == ".html" || ext == ".tmpl" {
 			_, err := t.T.ParseFiles(path)
 			if err != nil {
-				log.Printf("%s: %s", path, err)
+				log(ERROR, "%s: %s", path, err)
 
 				return err
 			}
 
-			log.Printf("parsed: %s", path)
+			log(INFO, "parsed: %s", path)
 		} else {
 			// skip, not something we want to parse
 		}
@@ -94,11 +94,11 @@ func (t *Templates) Render(w io.Writer, name string, d interface{},
 	fns ...template.FuncMap) error {
 
 	if t.Reload {
-		log.Print("reload...")
+		log(INFO, "reload...")
 
 		err := t.Parse()
 		if err != nil {
-			log.Printf("reload: %s", err)
+			log(ERROR, "reload: %s", err)
 
 			return err
 		}
@@ -106,7 +106,7 @@ func (t *Templates) Render(w io.Writer, name string, d interface{},
 
 	err := t.T.Funcs(TemplateFuncs(t.Fns, fns...)).ExecuteTemplate(w, name, d)
 	if err != nil {
-		log.Printf("%s: %s", name, err)
+		log(ERROR, "%s: %s", name, err)
 
 		return err
 	}
@@ -146,4 +146,31 @@ func TemplateFuncs(a template.FuncMap, b ...template.FuncMap) template.FuncMap {
 	}
 
 	return a
+}
+
+type LogLevel int
+
+const (
+	NONE LogLevel = iota
+	INFO
+	WARN
+	ERROR
+	DEBUG
+)
+
+var LOG_LEVEL LogLevel = NONE
+
+func init() {
+	logger.SetPrefix("[temple] ")
+}
+
+// log writes at level or below
+func log(ll LogLevel, f string, v ...interface{}) {
+	if LOG_LEVEL >= ll {
+		logger.Printf(f, v...)
+	}
+}
+
+func SetLogLevel(ll LogLevel) {
+	LOG_LEVEL = ll
 }
