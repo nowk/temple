@@ -4,13 +4,17 @@ import (
 	"fmt"
 	"html/template"
 	"io"
+	"io/ioutil"
 	logger "log"
 	"os"
 	"path/filepath"
 	"sync"
 
 	"github.com/russross/blackfriday"
+	"github.com/spf13/afero"
 )
+
+var Fs afero.Fs = &afero.OsFs{}
 
 // default delim left and right
 // due to angular {{}} collisions opted to change default delimters
@@ -62,7 +66,7 @@ func (t *Templates) Parse() error {
 
 	log(INFO, "templates: %s", t.Dir)
 
-	return filepath.Walk(t.Dir, func(path string, _ os.FileInfo,
+	return afero.Walk(t.Dir, func(path string, _ os.FileInfo,
 		err error) error {
 
 		if err != nil {
@@ -72,7 +76,7 @@ func (t *Templates) Parse() error {
 		ext := filepath.Ext(path)
 
 		if ext == ".html" || ext == ".tmpl" {
-			_, err := t.T.ParseFiles(path)
+			_, err := parseFiles(t.T, path)
 			if err != nil {
 				log(ERROR, "%s: %s", path, err)
 
@@ -85,7 +89,7 @@ func (t *Templates) Parse() error {
 		}
 
 		return nil
-	})
+	}, Fs)
 }
 
 // Render renders the defined template to w. Data can be passed in as d as well
@@ -112,6 +116,52 @@ func (t *Templates) Render(w io.Writer, name string, d interface{},
 	}
 
 	return nil
+}
+
+// parseFiles is the helper for the method and function. If the argument
+// template is nil, it is created from the first file.
+// NOTE this is copied from https://golang.org/src/text/template/helper.go?s=1608:1677#L34
+// to utlilize the afero.Fs
+func parseFiles(
+	t *template.Template, filenames ...string) (*template.Template, error) {
+
+	if len(filenames) == 0 {
+		// Not really a problem, but be consistent.
+		return nil, fmt.Errorf("template: no files named in call to ParseFiles")
+	}
+	for _, filename := range filenames {
+		f, err := Fs.Open(filename)
+		if err != nil {
+			return nil, err
+		}
+		defer f.Close()
+		b, err := ioutil.ReadAll(f)
+		if err != nil {
+			return nil, err
+		}
+		s := string(b)
+		name := filepath.Base(filename)
+		// First template becomes return value if not already defined,
+		// and we use that one for subsequent New calls to associate
+		// all the templates together. Also, if this file has the same name
+		// as t, this file becomes the contents of t, so
+		//  t, err := New(name).Funcs(xxx).ParseFiles(name)
+		// works. Otherwise we create a new template associated with t.
+		var tmpl *template.Template
+		if t == nil {
+			t = template.New(name)
+		}
+		if name == t.Name() {
+			tmpl = t
+		} else {
+			tmpl = t.New(name)
+		}
+		_, err = tmpl.Parse(s)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return t, nil
 }
 
 // DefaultFns are the default template funcs provided with this package
