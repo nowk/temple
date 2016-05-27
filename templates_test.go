@@ -41,6 +41,46 @@ func TestParsesTemplatesFromDefinedDir(t *testing.T) {
 	}
 }
 
+func TestParsesOnly_html_or_tmpl_extensions(t *testing.T) {
+	td := SetupFs(FsTree{
+		"/html": FsTree{
+			"index.html": `<% define "index" %>Hello World!<% end %>`,
+			"photo.jpg":  `<% define "index" %>Hello World!<% end %>`,
+			"about.tmpl": `<% define "about" %>I'm Batman!<% end %>`,
+		},
+	}, &Fs)
+	defer td()
+
+	var (
+		tmpl = NewTemplates("/html")
+
+		err = tmpl.Parse()
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for k, v := range map[string]string{
+		"index": "Hello World!",
+		"about": "I'm Batman!",
+	} {
+		var (
+			w = bytes.NewBuffer(nil)
+
+			err = tmpl.Render(w, k, nil)
+		)
+		if err != nil {
+			t.Errorf("expected no error, got %s", err)
+		}
+		var (
+			exp = v
+			got = w.String()
+		)
+		if exp != got {
+			t.Errorf("expected %s, got %s", exp, got)
+		}
+	}
+}
+
 func TestChangeDelims(t *testing.T) {
 	td := SetupFs(FsTree{
 		"/html": FsTree{
