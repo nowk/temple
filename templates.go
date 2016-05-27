@@ -176,6 +176,9 @@ func parseFiles(
 	return t, nil
 }
 
+// Lookup does a lookup on the t.T to find an existing template by name. It
+// returns both the template (or nill) and a bool value (true if found, false if
+// not).
 func (t *Templates) Lookup(name string) (*template.Template, bool) {
 	tmpl := t.T.Lookup(name)
 	if tmpl == nil {
