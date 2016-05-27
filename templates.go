@@ -27,10 +27,10 @@ func DevsMode(t *Templates) {
 }
 
 type Templates struct {
-	Reload bool
-	Dir    string
-	T      *template.Template // parsed templates
-	Fns    template.FuncMap   // default template funcs
+	Reload  bool
+	Dir     string
+	T       *template.Template // parsed templates
+	FuncMap template.FuncMap   // default template funcs
 
 	// mu provides a locking mechanism to sync parsing in order avoid redefined
 	// errors
@@ -38,13 +38,13 @@ type Templates struct {
 }
 
 // NewTemplates provides a new Templates
-// Overiding Fns at this level will not reinclude the DefaultFns, those will
-// require redefinition
+// Overiding FuncMap at this level will not reinclude the DefaultFuncMap, those
+// will require redefinition
 func NewTemplates(dir string, opts ...func(*Templates)) *Templates {
 	t := &Templates{
-		Reload: false,
-		Dir:    dir,
-		Fns:    DefaultFns,
+		Reload:  false,
+		Dir:     dir,
+		FuncMap: DefaultFuncMap,
 
 		mu: &sync.Mutex{},
 	}
@@ -70,7 +70,7 @@ func (t *Templates) Parse(delims ...string) error {
 	t.mu.Lock()
 	defer t.mu.Unlock()
 
-	t.T = template.New("-").Funcs(t.Fns)
+	t.T = template.New("-").Funcs(t.FuncMap)
 	t.T.Delims(delims[0], delims[1])
 
 	log(INFO, "templates: %s", t.Dir)
@@ -114,7 +114,7 @@ func (t *Templates) Render(
 		}
 	}
 
-	err := t.T.Funcs(TemplateFuncs(t.Fns, fns...)).ExecuteTemplate(w, name, d)
+	err := t.T.Funcs(TemplateFuncs(t.FuncMap, fns...)).ExecuteTemplate(w, name, d)
 	if err != nil {
 		log(ERROR, "%s: %s", name, err)
 

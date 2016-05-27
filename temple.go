@@ -8,8 +8,8 @@ import (
 	"github.com/russross/blackfriday"
 )
 
-// DefaultFns are the default template funcs provided with this package
-var DefaultFns = template.FuncMap{
+// DefaultFuncMap are the default template funcs provided with this package
+var DefaultFuncMap = template.FuncMap{
 	"markd":    MarkdFunc,
 	"noescape": NoescapeFunc,
 }
