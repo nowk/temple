@@ -81,7 +81,6 @@ func (t *Templates) Parse(delims ...string) error {
 		}
 
 		ext := filepath.Ext(path)
-
 		if ext == ".html" || ext == ".tmpl" {
 			_, err := parseFiles(t.T, path)
 			if err != nil {
@@ -136,7 +135,9 @@ func parseFiles(
 		// Not really a problem, but be consistent.
 		return nil, fmt.Errorf("template: no files named in call to ParseFiles")
 	}
+
 	for _, filename := range filenames {
+		// use afero to do the look up here and manually parse
 		f, err := Fs.Open(filename)
 		if err != nil {
 			return nil, err
@@ -146,15 +147,18 @@ func parseFiles(
 		if err != nil {
 			return nil, err
 		}
-		s := string(b)
-		name := filepath.Base(filename)
+
 		// First template becomes return value if not already defined,
 		// and we use that one for subsequent New calls to associate
 		// all the templates together. Also, if this file has the same name
 		// as t, this file becomes the contents of t, so
 		//  t, err := New(name).Funcs(xxx).ParseFiles(name)
 		// works. Otherwise we create a new template associated with t.
-		var tmpl *template.Template
+		var (
+			name = filepath.Base(filename)
+
+			tmpl *template.Template
+		)
 		if t == nil {
 			t = template.New(name)
 		}
@@ -163,10 +167,11 @@ func parseFiles(
 		} else {
 			tmpl = t.New(name)
 		}
-		_, err = tmpl.Parse(s)
-		if err != nil {
+
+		if _, err = tmpl.Parse(string(b)); err != nil {
 			return nil, err
 		}
 	}
+
 	return t, nil
 }
