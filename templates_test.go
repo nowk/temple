@@ -41,6 +41,38 @@ func TestParsesTemplatesFromDefinedDir(t *testing.T) {
 	}
 }
 
+func TestChangeDelims(t *testing.T) {
+	td := SetupFs(FsTree{
+		"/html": FsTree{
+			"index.html": `{{ define "index" }}Hello World!{{ end }}`,
+		},
+	}, &Fs)
+	defer td()
+
+	var (
+		tmpl = NewTemplates("/html")
+
+		err = tmpl.Parse("{{", "}}")
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	w := bytes.NewBuffer(nil)
+
+	err = tmpl.Render(w, "index", nil)
+	if err != nil {
+		t.Errorf("expected no error, got %s", err)
+	}
+	var (
+		exp = "Hello World!"
+		got = w.String()
+	)
+	if exp != got {
+		t.Errorf("expected %s, got %s", exp, got)
+	}
+}
+
 // test helpers
 
 type FsTree map[string]interface{}

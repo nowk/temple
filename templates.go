@@ -55,12 +55,23 @@ func NewTemplates(dir string, opts ...func(*Templates)) *Templates {
 }
 
 // Parse walks a directory tree and parses .html and .tmpl files
-func (t *Templates) Parse() error {
+func (t *Templates) Parse(delims ...string) error {
+	n := len(delims)
+	if n > 0 && n != 2 {
+		return fmt.Errorf("there must be exactly 2 delims")
+	}
+	if n == 0 {
+		delims = []string{
+			DelimL,
+			DelimR,
+		}
+	}
+
 	t.mu.Lock()
 	defer t.mu.Unlock()
 
 	t.T = template.New("-").Funcs(t.Fns)
-	t.T.Delims(DelimL, DelimR)
+	t.T.Delims(delims[0], delims[1])
 
 	log(INFO, "templates: %s", t.Dir)
 
