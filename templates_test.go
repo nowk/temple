@@ -113,6 +113,57 @@ func TestChangeDelims(t *testing.T) {
 	}
 }
 
+func TestLookupReturnsTemplateAndBool(t *testing.T) {
+	td := SetupFs(FsTree{
+		"/html": FsTree{
+			"index.html": `{{ define "index" }}Hello World!{{ end }}`,
+		},
+	}, &Fs)
+	defer td()
+
+	var (
+		tmpl = NewTemplates("/html")
+
+		err = tmpl.Parse("{{", "}}")
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	{
+		tt, ok := tmpl.Lookup("index")
+		if !ok {
+			t.Error("expected lookup to be true")
+		}
+
+		var (
+			w = bytes.NewBuffer(nil)
+
+			err = tt.Execute(w, nil)
+		)
+		if err != nil {
+			t.Errorf("expected no error, got %s", err)
+		}
+		var (
+			exp = "Hello World!"
+			got = w.String()
+		)
+		if exp != got {
+			t.Errorf("expected %s, got %s", exp, got)
+		}
+	}
+
+	{
+		tt, ok := tmpl.Lookup("doesnotexist")
+		if ok {
+			t.Error("expected lookup to be false")
+		}
+		if tt != nil {
+			t.Errorf("expected template to be nil, got %s", tt)
+		}
+	}
+}
+
 // test helpers
 
 type FsTree map[string]interface{}

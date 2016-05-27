@@ -175,3 +175,12 @@ func parseFiles(
 
 	return t, nil
 }
+
+func (t *Templates) Lookup(name string) (*template.Template, bool) {
+	tmpl := t.T.Lookup(name)
+	if tmpl == nil {
+		return nil, false
+	}
+
+	return tmpl, true
+}
